@@ -1,13 +1,13 @@
-# ⛽ GasPredict: Fuel Price Predictive Engine & Monitoring
+# ⛽ GasPredict: Fuel Refueling Optimization Engine
 
 > **Status:** Proof of Concept / Research Concluded. 
-> **Goal:** End-to-end data pipeline, monitoring, and predictive modeling for hyper-local retail fuel prices in Spain.
+> **Goal:** End-to-end data pipeline to optimize refueling decisions based on asymmetric market behaviors ("Rockets and Feathers"), discarding pure ML predictions due to market opacity.
 
-GasPredict is a dual-track project. It consists of a **Production Monitoring Stack** that tracks real-time fuel prices across the Valencian Community, and a **Machine Learning Research Track** that explores the viability of using state-of-the-art Deep Learning (Temporal Fusion Transformers) for price forecasting.
+GasPredict is an intelligent fuel monitoring and recommendation system for the Valencian Community. Instead of attempting the impossible task of forecasting the *exact* cent per liter of fuel in an opaque market, it predicts **when the user should refuel** to maximize savings, leveraging deterministic market behaviors.
 
 ## 🏗️ Architecture & Tech Stack
 
-The project is divided into a microservices architecture deployed via Docker, and an offline ML research environment.
+The project features a microservices architecture deployed via Docker, handling ETL pipelines, timeseries storage, and automated alerting, alongside an offline ML research environment that was deliberately not pushed to production.
 
 ```mermaid
 flowchart TD
@@ -19,8 +19,8 @@ flowchart TD
     subgraph Production Engine (Docker)
         ETL_G[ETL Geoportal\nPython]
         ETL_M[ETL Macro\nPython]
-        HEUR[Econometric Engine\nHeuristic Recommender]
-        NOTIF[Telegram Notifier\nAlert System]
+        HEUR[Decision Engine\nAsymmetric Lag Model]
+        NOTIF[Telegram Notifier\nSmart Alerts]
     end
 
     subgraph Storage & Viz
@@ -30,7 +30,7 @@ flowchart TD
 
     subgraph ML Research (Local/GPU)
         TFT[Temporal Fusion Transformer\nPyTorch Forecasting]
-        JUP[Jupyter\nTraining & Eval]
+        JUP[Jupyter\nResearch only]
     end
 
     MITECO --> ETL_G
@@ -52,30 +52,32 @@ flowchart TD
 
 ---
 
-## 🧠 The Two Brains: Production vs. Research
+## 🧠 The Pivot: Why we predict *Action* instead of *Price*
 
-### 1. The Production Engine (Heuristic/Econometric)
-Currently deployed in production. Instead of a black-box neural network, it uses a deterministic econometric model based on the **Synthetic Crack Spread** and macroeconomic lag.
+### 1. The Production Engine (Actionable Heuristics)
+Currently deployed in production. It uses a deterministic econometric model based on the **Synthetic Crack Spread** and the macroeconomic lag of crude oil.
 
-*   **ETL Pipeline:** Runs twice daily (07:15 and 18:30) fetching prices for all gas stations in the region, alongside Brent and Forex markets.
-*   **The Recommender:** Calculates the optimal day to refuel (7-day horizon) based on mathematical baselines (IEH tax floors + VAT) and the 15-day derivative of Brent in Euros.
-*   **Telegram Bot:** Sends a daily summary comparing the user's regular station with the cheapest station dynamically found along their commute route.
+*   **ETL Pipeline:** Runs twice daily (07:15 and 18:30) fetching prices for all stations in the region, alongside Brent and Forex markets.
+*   **The Recommender (The Core):** Calculates the optimal day to refuel within a 7-day window. It hardcodes the "Rockets and Feathers" effect:
+    *   *If Crude rises:* The model forces an immediate alert ("Refuel Today!"), mirroring how stations raise prices in 2-3 days (the "Rocket").
+    *   *If Crude drops:* The model advises waiting, penalizing the price drop calculation over a 14-day window (the "Feather"), mimicking how stations artificially hold high prices to clear expensive underground inventory.
+*   **Telegram Bot:** Sends a daily summary comparing the user's regular station with the dynamically cheapest station along their commute route.
 
-### 2. The Machine Learning Track (TFT)
+### 2. The Machine Learning Track (The Failed TFT Experiment)
 A research effort to predict the *exact* price of fuel 7 days ahead using a **Temporal Fusion Transformer (TFT)**. 
 
-*   **Why TFT?** It excels at combining static covariates (Station ID, municipality, brand), known future inputs (day of the week, holidays), and unknown future inputs (past prices, macro indicators).
-*   **Performance:** Achieved a validation loss of `0.0235` (QuantileLoss) on the full dataset, capturing the general trend successfully.
-*   **Interpretability:** Used TFT's inherent attention mechanisms to extract variable importance (identifying Brent lag as a primary driver, but exposing severe spatial dependencies).
+*   **Why TFT?** It theoretically excels at combining static covariates (Station ID), known future inputs (holidays), and unknown future inputs (macro indicators).
+*   **Performance:** Achieved a validation loss of `0.0235` (QuantileLoss) on the full dataset. 
+*   **The Reality Check:** Despite "good" loss metrics, a 1-3 cent error margin renders the model useless for deciding whether to refuel today or tomorrow. 
 
 ---
 
-## 🔬 Key Learnings: Why the ML Model didn't go to Production
+## 🔬 Key Learnings: The Systemic Limitations of Fuel Forecasting
 
-Despite the good validation metrics of the TFT model, a conscious architectural decision was made to keep the heuristic model in production. The domain research revealed fundamental structural issues in the retail fuel market that make pure ML forecasting unreliable for consumer decision-making:
+The conscious architectural decision to deploy the Heuristic Engine over the TFT model highlights critical limitations in applying Deep Learning to intervened markets:
 
-1.  **The "Rockets and Feathers" Effect (Asymmetric Transmission):** Fuel prices rise quickly when crude oil rises (rockets), but fall slowly when it drops (feathers). The trigger for this is the physical inventory rotation of the underground tanks at each specific station. Without real-time access to the station's inventory levels (which is private data), the model is blind to the most critical feature.
-2.  **Algorithmic Oligopolies:** Major brands (Repsol, BP, etc.) use private dynamic pricing software (e.g., Kalibrate) with hundreds of business rules. The model attempts to predict statistical human demand, but it is actually fighting against deterministic, private corporate algorithms.
-3.  **Regulatory Noise:** Sudden government decrees (e.g., mandatory 20-cent subsidies, tax modifications) introduce massive, unmodellable shocks to the time-series data.
+1.  **Blindness to Inventory (The Missing Variable):** The true trigger for price changes is the physical inventory rotation of a station's underground tanks. Since stock levels and tanker delivery schedules are private, the TFT model is completely blind to the primary feature driving local price volatility.
+2.  **Fighting Private Algorithms:** Major brands (Repsol, BP, etc.) use dynamic pricing software (e.g., Kalibrate). Attempting to forecast this with statistical ML means trying to predict a deterministic, privately-ruled algorithm rather than natural human demand.
+3.  **Regulatory & Fiscal Noise:** Roughly 50% of fuel price in Spain is fixed tax (IEH + VAT). Furthermore, sudden government subsidies introduce massive, unmodellable shocks to the time-series data.
 
-**Conclusion:** The Temporal Fusion Transformer is a powerful architecture, but it requires a domain with genuine signal (like human mobility demand or weather-dependent energy consumption). In highly intervened, inventory-blind markets like retail fuel, a robust heuristic pipeline provides more honest and actionable value to the end user.
+**Conclusion:** Pure Machine Learning (TFT) requires a domain with genuine, endogenous signal (like human mobility demand or behavior). In highly intervened, inventory-blind markets like retail fuel, predicting the *exact price* is a vanity metric. Predicting the *optimal consumer action* via asymmetric heuristics provides honest, robust value.
