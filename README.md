@@ -1,10 +1,6 @@
 # ⛽ GasPredict — Motor de Optimización de Repostaje
 
-![Python](https://img.shields.io/badge/Python-3.11-blue?logo=python)
-![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker)
-![PyTorch](https://img.shields.io/badge/PyTorch-TFT-EE4C2C?logo=pytorch)
-![TimescaleDB](https://img.shields.io/badge/TimescaleDB-PostgreSQL_16-FDB515?logo=postgresql)
-![Estado](https://img.shields.io/badge/Estado-Investigaci%C3%B3n_concluida-lightgrey)
+![Python](https://img.shields.io/badge/Python-3.11-3776AB?style=flat&logo=python&logoColor=white) ![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=flat&logo=docker&logoColor=white) ![PyTorch](https://img.shields.io/badge/PyTorch-TFT-EE4C2C?style=flat&logo=pytorch&logoColor=white) ![TimescaleDB](https://img.shields.io/badge/TimescaleDB-PostgreSQL_16-FDB515?style=flat&logo=postgresql&logoColor=white) ![Estado](https://img.shields.io/badge/Estado-Investigación_concluida-6c757d?style=flat)
 
 > **GasPredict no predice el precio exacto de la gasolina. Predice cuándo deberías repostar.**
 >
