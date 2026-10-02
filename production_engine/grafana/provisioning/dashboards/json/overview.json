@@ -1,0 +1,342 @@
+{
+  "annotations": {
+    "list": []
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "id": 100,
+      "title": "🛵 TU RUTA DIARIA (Getafe → Leganés → Alcorcón) — Gasolina 95 & Moto",
+      "type": "row"
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 4, "w": 8, "x": 0, "y": 1 },
+      "id": 101,
+      "title": "⭐ Tu Habitual: Plenoil Getafe (C/ Valencia, 75)",
+      "type": "stat",
+      "datasource": "GasPredict-DB",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "fixed", "fixedColor": "#3274D9" },
+          "decimals": 3,
+          "unit": "currencyEUR"
+        }
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "vertical",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "" },
+        "textMode": "value_and_name"
+      },
+      "targets": [
+        {
+          "datasource": "GasPredict-DB",
+          "rawSql": "SELECT time, price_gasolina_95_e5 as \"value\", ROUND(10.0 / price_gasolina_95_e5, 2) || ' L con 10 €' as metric FROM station_prices WHERE id_station = 4017 AND time = (SELECT MAX(time) FROM station_prices);",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 4, "w": 8, "x": 8, "y": 1 },
+      "id": 102,
+      "title": "🏆 La Más Barata Hoy en tu Ruta",
+      "type": "stat",
+      "datasource": "GasPredict-DB",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "fixed", "fixedColor": "#73BF69" },
+          "decimals": 3,
+          "unit": "currencyEUR"
+        }
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "vertical",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "" },
+        "textMode": "value_and_name"
+      },
+      "targets": [
+        {
+          "datasource": "GasPredict-DB",
+          "rawSql": "SELECT sp.time, sp.price_gasolina_95_e5 as \"value\", gs.name || ' (' || gs.municipality || ') · ' || ROUND(10.0 / sp.price_gasolina_95_e5, 2) || ' L con 10 €' as metric FROM station_prices sp JOIN gas_stations gs ON sp.id_station = gs.id_station WHERE (gs.municipality ILIKE '%Getafe%' OR gs.municipality ILIKE '%Leganés%' OR gs.municipality ILIKE '%Alcorcón%' OR gs.municipality ILIKE '%Fuenlabrada%') AND sp.price_gasolina_95_e5 > 0 AND sp.time = (SELECT MAX(time) FROM station_prices) ORDER BY sp.price_gasolina_95_e5 ASC LIMIT 1;",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 4, "w": 8, "x": 16, "y": 1 },
+      "id": 103,
+      "title": "💰 Ahorro si vas a la Más Barata (vs tu Plenoil con 10 €)",
+      "type": "stat",
+      "datasource": "GasPredict-DB",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "fixed", "fixedColor": "#FF9830" },
+          "decimals": 2,
+          "unit": "currencyEUR"
+        }
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "vertical",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "" },
+        "textMode": "value_and_name"
+      },
+      "targets": [
+        {
+          "datasource": "GasPredict-DB",
+          "rawSql": "WITH latest_time AS (SELECT MAX(time) as t FROM station_prices), commute_prices AS (SELECT sp.time, sp.price_gasolina_95_e5, gs.name, gs.municipality, gs.id_station FROM station_prices sp JOIN gas_stations gs ON sp.id_station = gs.id_station WHERE (gs.municipality ILIKE '%Getafe%' OR gs.municipality ILIKE '%Leganés%' OR gs.municipality ILIKE '%Alcorcón%' OR gs.municipality ILIKE '%Fuenlabrada%') AND sp.price_gasolina_95_e5 > 0 AND sp.time = (SELECT t FROM latest_time)), plenoil AS (SELECT price_gasolina_95_e5 as p FROM commute_prices WHERE id_station = 4017 LIMIT 1), cheapest AS (SELECT price_gasolina_95_e5 as p, name, municipality FROM commute_prices ORDER BY price_gasolina_95_e5 ASC LIMIT 1) SELECT (SELECT t FROM latest_time) as time, CASE WHEN cheapest.p < plenoil.p THEN ROUND(10.0 - (10.0 * (cheapest.p / plenoil.p)), 2) ELSE 0.00 END as \"value\", CASE WHEN cheapest.p < plenoil.p THEN '+' || ROUND((10.0 / cheapest.p) - (10.0 / plenoil.p), 2) || ' L extra (' || cheapest.name || ')' ELSE '¡Plenoil es la más barata hoy!' END as metric FROM plenoil, cheapest;",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 4, "w": 12, "x": 0, "y": 5 },
+      "id": 105,
+      "title": "📅 ¿Cuándo Repostar en tu Plenoil Getafe?",
+      "type": "stat",
+      "datasource": "GasPredict-DB",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "fixed", "fixedColor": "#3274D9" }
+        }
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "vertical",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "" },
+        "textMode": "value_and_name"
+      },
+      "targets": [
+        {
+          "datasource": "GasPredict-DB",
+          "rawSql": "SELECT time, best_day_to_refuel as \"value\", 'Previsión a 7d: ' || CASE WHEN expected_change_7d >= 0 THEN '+' ELSE '' END || expected_change_7d || ' €/L (' || predicted_price_7d || ' €/L) · ' || litros_moto_best || ' L moto' as metric FROM refuel_recommendations WHERE scope = 'PLENOIL_RIBA_ROJA' ORDER BY time DESC LIMIT 1;",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 4, "w": 12, "x": 12, "y": 5 },
+      "id": 106,
+      "title": "📅 ¿Cuándo Repostar en la Más Barata del Día?",
+      "type": "stat",
+      "datasource": "GasPredict-DB",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "fixed", "fixedColor": "#73BF69" }
+        }
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "vertical",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "" },
+        "textMode": "value_and_name"
+      },
+      "targets": [
+        {
+          "datasource": "GasPredict-DB",
+          "rawSql": "SELECT time, best_day_to_refuel as \"value\", station_name || ' (' || municipality || ') · ' || CASE WHEN expected_change_7d >= 0 THEN '+' ELSE '' END || expected_change_7d || ' €/L en 7d (' || predicted_price_7d || ' €/L)' as metric FROM refuel_recommendations WHERE scope = 'CHEAPEST_COMMUTE' ORDER BY time DESC LIMIT 1;",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 9, "w": 24, "x": 0, "y": 9 },
+      "id": 104,
+      "title": "📍 Comparador de Gasolineras en tu Ruta (Ordenadas de más barata a más cara)",
+      "type": "table",
+      "datasource": "GasPredict-DB",
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "Gasolina 95 (€/L)" },
+            "properties": [
+              { "id": "unit", "value": "currencyEUR" },
+              { "id": "decimals", "value": 3 },
+              { "id": "custom.cellOptions", "value": { "type": "color-background", "mode": "gradient" } },
+              { "id": "thresholds", "value": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "#EAB839", "value": 1.75 }, { "color": "red", "value": 1.90 }] } }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Dif. vs tu Plenoil (€/L)" },
+            "properties": [
+              { "id": "unit", "value": "currencyEUR" },
+              { "id": "decimals", "value": 3 },
+              { "id": "custom.cellOptions", "value": { "type": "color-text" } },
+              { "id": "thresholds", "value": { "mode": "absolute", "steps": [{ "color": "#73BF69", "value": null }, { "color": "#3274D9", "value": 0 }, { "color": "#F2495C", "value": 0.001 }] } }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Litros con 10 €" },
+            "properties": [
+              { "id": "unit", "value": "litre" },
+              { "id": "decimals", "value": 2 }
+            ]
+          }
+        ]
+      },
+      "targets": [
+        {
+          "datasource": "GasPredict-DB",
+          "format": "table",
+          "rawSql": "WITH plenoil_ref AS (SELECT price_gasolina_95_e5 as ref_price FROM station_prices WHERE id_station = 4017 AND time = (SELECT MAX(time) FROM station_prices)) SELECT gs.municipality as \"Municipio\", CASE WHEN gs.id_station = 4017 THEN '⭐ PLENOIL (Tu habitual)' WHEN gs.name ILIKE '%plenergy%' THEN 'PLENOIL' ELSE gs.name END as \"Gasolinera\", gs.address as \"Dirección\", sp.price_gasolina_95_e5 as \"Gasolina 95 (€/L)\", ROUND(10.0 / sp.price_gasolina_95_e5, 2) as \"Litros con 10 €\", ROUND(sp.price_gasolina_95_e5 - (SELECT ref_price FROM plenoil_ref), 3) as \"Dif. vs tu Plenoil (€/L)\" FROM gas_stations gs JOIN station_prices sp ON gs.id_station = sp.id_station WHERE (gs.municipality ILIKE '%Getafe%' OR gs.municipality ILIKE '%Leganés%' OR gs.municipality ILIKE '%Alcorcón%' OR gs.municipality ILIKE '%Fuenlabrada%') AND sp.price_gasolina_95_e5 > 0 AND sp.time = (SELECT MAX(time) FROM station_prices) ORDER BY sp.price_gasolina_95_e5 ASC;",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 18 },
+      "id": 200,
+      "title": "📈 PREDICCIÓN GLOBAL Y MERCADOS MACRO",
+      "type": "row"
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 19 },
+      "id": 1,
+      "title": "Media Gasolina 95 (C. Valenciana)",
+      "type": "stat",
+      "datasource": "GasPredict-DB",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "unit": "currencyEUR"
+        }
+      },
+      "targets": [
+        {
+          "datasource": "GasPredict-DB",
+          "rawSql": "SELECT time, AVG(price_gasolina_95_e5) as \"Gasolina 95 (€/L)\" FROM station_prices WHERE price_gasolina_95_e5 > 0 AND $__timeFilter(time) GROUP BY time ORDER BY time;",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 19 },
+      "id": 2,
+      "title": "Petróleo Brent (€/barril)",
+      "type": "stat",
+      "datasource": "GasPredict-DB",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "unit": "currencyEUR"
+        }
+      },
+      "targets": [
+        {
+          "datasource": "GasPredict-DB",
+          "rawSql": "SELECT time, brent_eur as \"Brent (€/bbl)\" FROM macro_indicators WHERE brent_eur IS NOT NULL AND $__timeFilter(time) ORDER BY time;",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 19 },
+      "id": 3,
+      "title": "Petróleo Brent (USD)",
+      "type": "stat",
+      "datasource": "GasPredict-DB",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD"
+        }
+      },
+      "targets": [
+        {
+          "datasource": "GasPredict-DB",
+          "rawSql": "SELECT time, brent_usd as \"Brent ($/barril)\" FROM macro_indicators WHERE brent_usd IS NOT NULL AND $__timeFilter(time) ORDER BY time;",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 19 },
+      "id": 4,
+      "title": "Tipo de Cambio EUR/USD",
+      "type": "stat",
+      "datasource": "GasPredict-DB",
+      "targets": [
+        {
+          "datasource": "GasPredict-DB",
+          "rawSql": "SELECT time, eur_usd as \"EUR/USD\" FROM macro_indicators WHERE eur_usd IS NOT NULL AND $__timeFilter(time) ORDER BY time;",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 23 },
+      "id": 7,
+      "title": "Curva de Predicción a 7-14 Días vs Precios Reales (Gasolina 95 E5)",
+      "type": "timeseries",
+      "datasource": "GasPredict-DB",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2
+          },
+          "unit": "currencyEUR"
+        }
+      },
+      "targets": [
+        {
+          "datasource": "GasPredict-DB",
+          "rawSql": "SELECT target_date::timestamp as time, predicted_price as \"Media Autonómica 95 (€/L)\" FROM price_predictions WHERE scope = 'COMUNIDAD_VALENCIANA' AND fuel_type = 'GASOLINA_95_E5' AND target_date >= CURRENT_DATE - INTERVAL '14 days' ORDER BY target_date;",
+          "refId": "A"
+        },
+        {
+          "datasource": "GasPredict-DB",
+          "rawSql": "SELECT target_date::timestamp as time, predicted_price as \"⭐ Proyección Plenoil Getafe (€/L)\" FROM price_predictions WHERE scope = 'PLENOIL_RIBA_ROJA' AND fuel_type = 'GASOLINA_95_E5' AND target_date >= CURRENT_DATE - INTERVAL '14 days' ORDER BY target_date;",
+          "refId": "B"
+        },
+        {
+          "datasource": "GasPredict-DB",
+          "rawSql": "SELECT target_date::timestamp as time, predicted_price as \"🏆 Proyección Más Barata Ruta (€/L)\" FROM price_predictions WHERE scope = 'CHEAPEST_COMMUTE' AND fuel_type = 'GASOLINA_95_E5' AND target_date >= CURRENT_DATE - INTERVAL '14 days' ORDER BY target_date;",
+          "refId": "C"
+        }
+      ]
+    }
+  ],
+  "refresh": "1h",
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": ["gaspredict", "server25", "ruta-moto", "plenoil"],
+  "time": {
+    "from": "now-30d",
+    "to": "now+14d"
+  },
+  "timezone": "browser",
+  "title": "GasPredict - Monitor y Predicción de Carburantes",
+  "uid": "gaspredict-overview",
+  "version": 4
+}

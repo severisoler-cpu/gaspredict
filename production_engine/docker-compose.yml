@@ -1,0 +1,74 @@
+# =============================================================================
+#  GasPredict — Sistema Predictivo y Monitor de Carburantes (C. Valenciana)
+#
+#  Servicios:
+#  - TimescaleDB (Postgres 16 + extensión de series temporales)
+#  - Grafana (Visualización analítica en puerto 3030)
+#  - GasPredict Engine (ETL Python + Motor Predictivo + Notificador Telegram)
+# =============================================================================
+
+services:
+
+  timescaledb:
+    image: timescale/timescaledb:latest-pg16
+    container_name: gaspredict-db
+    restart: unless-stopped
+    command: postgres -c shared_buffers=128MB -c work_mem=16MB -c maintenance_work_mem=32MB -c max_connections=40
+    mem_limit: 350m
+    environment:
+      - POSTGRES_USER=gaspredict
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=gaspredict
+      - TZ=Europe/Madrid
+    volumes:
+      - gaspredict_db:/var/lib/postgresql/data
+    ports:
+      - "5435:5432"
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: gaspredict-grafana
+    restart: unless-stopped
+    mem_limit: 384m
+    depends_on:
+      - timescaledb
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_ROOT_URL=%(protocol)s://%(domain)s:%(http_port)s/gaspredict/
+      - GF_SERVER_SERVE_SUB_PATH=true
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
+      - GF_AUTH_ANONYMOUS_ORG_NAME=Main Org.
+      - GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH=/etc/grafana/provisioning/dashboards/json/overview.json
+      - DB_PASSWORD=${DB_PASSWORD}
+      - TZ=Europe/Madrid
+    volumes:
+      - gaspredict_grafana:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+    ports:
+      - "3030:3000"
+
+  engine:
+    build: ./app
+    container_name: gaspredict-engine
+    restart: unless-stopped
+    mem_limit: 180m
+    depends_on:
+      - timescaledb
+    environment:
+      - DB_HOST=timescaledb
+      - DB_PORT=5432
+      - DB_USER=gaspredict
+      - DB_NAME=gaspredict
+      - DB_PASSWORD=${DB_PASSWORD}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID:-}
+      - TZ=Europe/Madrid
+
+volumes:
+  gaspredict_db:
+    name: gaspredict_db
+  gaspredict_grafana:
+    name: gaspredict_grafana
