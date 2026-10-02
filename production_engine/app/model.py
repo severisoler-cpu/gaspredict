@@ -1,3 +1,4 @@
+import os
 import logging
 import datetime
 import numpy as np
@@ -49,14 +50,19 @@ def generate_predictions(engine):
     ORDER BY day ASC;
     """
 
-    # 3. Consultar Plenoil Getafe (ID 4017)
-    sql_plenoil = """
+    # 3. Consultar Gasolinera Favorita
+    fav_name = os.getenv("USER_FAVORITE_STATION_NAME", "PLENOIL")
+    fav_muni = os.getenv("USER_FAVORITE_STATION_MUNICIPALITY", "Getafe")
+    
+    sql_plenoil = f"""
     SELECT gs.name, gs.municipality, sp.price_gasolina_95_e5
     FROM station_prices sp
     JOIN gas_stations gs ON sp.id_station = gs.id_station
-    WHERE gs.id_station = 4017 AND sp.time = (SELECT MAX(time) FROM station_prices)
+    WHERE gs.name ILIKE '%%{fav_name}%%' AND gs.municipality ILIKE '%%{fav_muni}%%'
+      AND sp.time = (SELECT MAX(time) FROM station_prices)
     LIMIT 1;
     """
+
 
     # 4. Consultar dinámicamente la MÁS BARATA hoy en la ruta de cercanías
     sql_cheapest = """
@@ -132,7 +138,7 @@ def generate_predictions(engine):
 
     if res_plenoil and res_plenoil["price_gasolina_95_e5"]:
         station_targets.append({
-            "scope": "PLENOIL_RIBA_ROJA",
+            "scope": "FAVORITE_STATION",
             "name": res_plenoil["name"],
             "municipality": res_plenoil["municipality"],
             "current_price": float(res_plenoil["price_gasolina_95_e5"])

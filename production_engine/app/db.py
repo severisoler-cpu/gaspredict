@@ -90,7 +90,11 @@ HYPERTABLE_SQL = [
     "SELECT create_hypertable('refuel_recommendations', 'time', if_not_exists => TRUE);"
 ]
 
-VIEWS_SQL = """
+def get_views_sql():
+    route_municipalities = os.getenv("USER_ROUTE_MUNICIPALITIES", "Getafe, Leganés, Alcorcón").split(",")
+    conditions = " OR ".join([f"gs.municipality ILIKE '%%{m.strip()}%%'" for m in route_municipalities])
+    
+    return f"""
 CREATE OR REPLACE VIEW v_daily_province_averages AS
 SELECT
     date_trunc('day', sp.time) AS day,
@@ -130,10 +134,7 @@ SELECT
 FROM gas_stations gs
 JOIN station_prices sp ON gs.id_station = sp.id_station
 WHERE (
-    gs.municipality ILIKE '%Getafe%' OR
-    gs.municipality ILIKE '%Leganés%' OR
-    gs.municipality ILIKE '%Alcorcón%' OR
-    gs.municipality ILIKE '%Fuenlabrada%'
+    {conditions}
 )
 AND sp.price_gasolina_95_e5 > 0;
 """
@@ -151,7 +152,9 @@ def init_schema(engine):
                 conn.execute(text(h_stmt))
             except Exception as e:
                 logger.warning(f"Aviso al crear hypertable ({h_stmt}): {e}")
-        for v_stmt in VIEWS_SQL.strip().split(";"):
+                
+        views_sql = get_views_sql()
+        for v_stmt in views_sql.strip().split(";"):
             v_stmt = v_stmt.strip()
             if v_stmt:
                 conn.execute(text(v_stmt))
