@@ -9,6 +9,8 @@
 __pycache__/
 *.pyc
 
-# Ignorar archivos de sistema
+# Ignorar archivos de sistema y scripts locales
 .DS_Store
 Thumbs.db
+*.bat
+launch_jupyter.bat
