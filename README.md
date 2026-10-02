@@ -18,7 +18,7 @@ Monitoriza en tiempo real los precios de todos los carburantes de la **Comunidad
 
 El resultado llega cada día, a las 07:15 y 18:30, directamente al móvil por Telegram:
 
-```
+```text
 ⛽ GasPredict — Monitor de Carburantes
 📅 Fecha: 02/10/2026 07:15
 
@@ -41,30 +41,30 @@ El resultado llega cada día, a las 07:15 y 18:30, directamente al móvil por Te
 
 ---
 
-## 🏗️ Arquitectura
+## 🏗️ Las Dos Arquitecturas: Producción vs. Investigación
+
+El proyecto mantuvo una clara separación entre el entorno automatizado de producción y el entorno de investigación algorítmica.
+
+### 1. Arquitectura de Producción (Motor Heurístico)
+Este es el sistema "en vivo", orquestado con Docker y diseñado para fiabilidad y alertas diarias.
 
 ```mermaid
 flowchart TD
-    subgraph Fuentes de Datos
+    subgraph Fuentes de Datos [Data Sources]
         MITECO[API Geoportal MITECO\nMinisterio de España]
         YF[Yahoo Finance API\nBrent · EUR/USD · RBOB · HO]
     end
 
-    subgraph Motor de Producción - Docker
+    subgraph Motor de Producción [Production Engine - Docker]
         ETL_G[etl_geoportal.py\nETL precios por estación]
         ETL_M[etl_macro.py\nETL indicadores macro]
-        HEUR[model.py\nMotor de Decisión Asimétrico]
+        HEUR[model.py\nMotor Heurístico Asimétrico]
         NOTIF[notifier.py\nBot Telegram]
     end
 
-    subgraph Almacenamiento y Visualización
+    subgraph Almacenamiento y Viz [Storage & Visualization]
         TSDB[(TimescaleDB\nPostgreSQL 16)]
-        GRAF[Grafana\nDashboard Analítico · Puerto 3030]
-    end
-
-    subgraph Investigación ML - Local con GPU
-        TFT[Temporal Fusion Transformer\nPyTorch Forecasting]
-        JUP[Jupyter Notebooks\nSolo investigación]
+        GRAF[Grafana\nDashboard Analítico]
     end
 
     MITECO --> ETL_G
@@ -75,7 +75,23 @@ flowchart TD
     HEUR --> TSDB
     HEUR --> NOTIF
     TSDB --> GRAF
-    TSDB -. Exportación Parquet .-> TFT
+```
+
+### 2. Pipeline de Investigación ML (Temporal Fusion Transformer)
+Entorno offline y manual (GPU local) usado para evaluar si el estado del arte en series temporales podía superar a la heurística determinista.
+
+```mermaid
+flowchart LR
+    subgraph Data Export
+        TSDB[(TimescaleDB\nHistórico)] -. Export .-> PQT[Archivos .parquet\nDataset consolidado]
+    end
+
+    subgraph ML Research Environment [Entorno Local - GPU]
+        PQT --> PREP[01_prepare_data.ipynb\nFeature Engineering]
+        PREP --> TRAIN[02_train_tft.ipynb\nPyTorch Forecasting]
+        TRAIN --> CKPT[(Model Checkpoints\n.ckpt)]
+        CKPT --> EVAL[03_evaluate.ipynb\nInterpretabilidad y Métricas]
+    end
 ```
 
 ### Stack tecnológico
@@ -91,7 +107,7 @@ flowchart TD
 
 ## 📁 Estructura del repositorio
 
-```
+```text
 GasPredict/
 │
 ├── production_engine/          # 🐳 Motor desplegado en producción
