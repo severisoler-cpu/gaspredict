@@ -2,17 +2,17 @@
 
 ![Python](https://img.shields.io/badge/Python-3.11-3776AB?style=flat&logo=python&logoColor=white) ![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=flat&logo=docker&logoColor=white) ![PyTorch](https://img.shields.io/badge/PyTorch-TFT-EE4C2C?style=flat&logo=pytorch&logoColor=white) ![TimescaleDB](https://img.shields.io/badge/TimescaleDB-PostgreSQL_16-FDB515?style=flat&logo=postgresql&logoColor=white) ![Estado](https://img.shields.io/badge/Estado-Investigación_concluida-6c757d?style=flat)
 
-> **GasPredict no predice el precio exacto de la gasolina. Predice cuándo deberías repostar.**
->
-> Esta distinción es el resultado central de este proyecto: tras construir y evaluar un modelo de Deep Learning (Temporal Fusion Transformer) con `val_loss=0.0235`, se llegó a la conclusión de que predecir céntimos exactos en un mercado intervenido por oligopolios y regulación estatal es un problema **matemáticamente resoluble pero prácticamente inútil**. Un error de ±2 céntimos no te dice si repostar hoy o mañana. Una heurística bien diseñada, sí.
+**GasPredict es un sistema inteligente de monitorización y recomendación de repostaje de carburantes para la Comunidad Valenciana.** Su objetivo es indicar al usuario el momento óptimo para llenar el depósito maximizando el ahorro, basándose en la transmisión de los precios macroeconómicos al surtidor local.
 
 ---
 
-## ¿Qué hace el sistema?
+## 🚀 El Sistema Actual (En Producción)
 
-Monitoriza en tiempo real los precios de todos los carburantes de la **Comunidad Valenciana** (fuente: API del Ministerio MITECO), los cruza con los indicadores macroeconómicos (Brent, EUR/USD via Yahoo Finance), y aplica un modelo econométrico basado en el fenómeno de **transmisión asimétrica de precios** ("Efecto Cohetes y Plumas") para recomendar el día óptimo de repostaje en un horizonte de **7 días**.
+Actualmente, GasPredict funciona como un orquestador automatizado impulsado por un **Motor Heurístico y Econométrico**. No utiliza Inteligencia Artificial para adivinar el precio exacto, sino que aplica reglas matemáticas basadas en el comportamiento real del mercado para recomendar una **acción** (repostar o esperar).
 
-El resultado llega cada día, a las 07:15 y 18:30, directamente al móvil por Telegram:
+### ¿Qué hace el sistema hoy?
+
+Monitoriza en tiempo real los precios de todos los carburantes (vía API del Ministerio MITECO), los cruza con indicadores macroeconómicos (Brent, EUR/USD) y aplica su motor de decisión. El resultado llega cada día directamente al móvil por Telegram:
 
 ```text
 ⛽ GasPredict — Monitor de Carburantes
@@ -35,14 +35,26 @@ El resultado llega cada día, a las 07:15 y 18:30, directamente al móvil por Te
      congelar el mejor precio.
 ```
 
----
+### Cómo funciona el Motor de Decisión
 
-## 🏗️ Las Dos Arquitecturas: Producción vs. Investigación
+La pieza central del sistema actual (`model.py`) se basa en el **"Efecto Cohetes y Plumas"** (transmisión asimétrica de precios):
 
-El proyecto mantuvo una clara separación entre el entorno automatizado de producción y el entorno de investigación algorítmica.
+| Escenario | Comportamiento del mercado | Cómo lo modela el sistema actual |
+|---|---|---|
+| **Brent sube** | Las gasolineras suben en **2-3 días** para proteger márgenes | Ventana de transmisión: **7 días** → alerta "¡REPOSTA HOY!" |
+| **Brent baja** | Las gasolineras aguantan el precio **semanas** para vaciar inventario | Ventana de transmisión: **14 días** → "Espera a que baje" |
 
-### 1. Arquitectura de Producción (Motor Heurístico)
-Este es el sistema "en vivo", orquestado con Docker y diseñado para fiabilidad y alertas diarias.
+La asimetría está hardcodeada explícitamente en el núcleo de la decisión:
+```python
+# Subida (cohete): el precio se traslada rápido (penaliza espera)
+w = min(1.0, h / 7.0) if brent_trend > 0 else min(1.0, h / 14.0)
+#                                                        ^^^^^^^
+#                              Bajada (pluma): el descuento tarda el doble en llegar
+```
+
+### Arquitectura de Producción
+
+Este es el sistema "en vivo", orquestado con Docker y diseñado para fiabilidad y alertas diarias automáticas.
 
 ```mermaid
 flowchart TD
@@ -73,8 +85,24 @@ flowchart TD
     TSDB --> GRAF
 ```
 
-### 2. Pipeline de Investigación ML (Temporal Fusion Transformer)
-Entorno offline y manual (GPU local) usado para evaluar si el estado del arte en series temporales podía superar a la heurística determinista.
+### 🚀 Cómo ejecutar la versión de producción
+
+1. Copiar el entorno: `cp production_engine/.env.example production_engine/.env`
+2. Configurar tokens de Telegram y contraseñas.
+3. Levantar servicios: `cd production_engine && docker compose up -d`
+4. Grafana disponible en `http://localhost:3030`. Los ETLs se ejecutan automáticamente (07:15 y 18:30).
+
+---
+
+## 🔬 Lo que pretendía ser: El Experimento de Deep Learning (TFT)
+
+Originalmente, el proyecto nació con una ambición puramente orientada al Machine Learning: **predecir el precio exacto del combustible a 7 días vista mediante IA**, con un margen de error mínimo. 
+
+Para ello, se construyó un pipeline de investigación utilizando el estado del arte en predicción de series temporales multivariables: el **Temporal Fusion Transformer** (Lim et al., Google Brain 2021).
+
+### Arquitectura de Investigación ML
+
+El entrenamiento se realizó en un entorno local offline con GPU, alimentado por volcados históricos de la base de datos de producción.
 
 ```mermaid
 flowchart LR
@@ -90,178 +118,60 @@ flowchart LR
     end
 ```
 
-### Stack tecnológico
-| Capa | Tecnología |
-|---|---|
-| Ingeniería de datos | Python 3.11, Pandas, SQLAlchemy, Schedule |
-| Infraestructura | Docker Compose, Raspberry Pi 5 (aarch64) |
-| Base de datos | TimescaleDB (PostgreSQL 16 con extensión de series temporales) |
-| Visualización | Grafana (dashboards aprovisionados por código) |
-| Machine Learning | PyTorch, PyTorch Forecasting, Lightning |
+### Resultados del Entrenamiento
+
+El modelo se alimentó con covariables estáticas (`id_station`, marca), variables futuras (`día_semana`, festivos) y lags macroeconómicos. 
+
+Se lograron resultados matemáticamente prometedores:
+- **Modelo completo (C. Valenciana):** `val_loss` de **0.0235** (QuantileLoss)
+- **Modelo subconjunto (ruta del usuario):** `val_loss` de **0.0579**
+
+**Interpretabilidad del TFT:**
+Gracias a las capas de atención del TFT, pudimos extraer la importancia de las variables (el modelo aprendió correctamente que el precio anterior y el lag del Brent eran vitales) y su foco temporal (mirando los últimos 14 días):
+
+![Variable Importance](variable_importance.png)
+![Atención Temporal](attention_temporal.png)
+
+El backtest demostró que el modelo capturaba perfectamente las inercias a 7 días:
+![Predicción 7 días](prediction_7days.png)
+
+### 🛑 Por qué no llegó a producción: La realidad del dominio
+
+Si el modelo era matemáticamente preciso (`0.0235`), **¿por qué se descartó para poner en su lugar la heurística actual?**
+
+El análisis profundo del mercado demostró que las predicciones puras de ML en este sector sufren de limitaciones sistémicas:
+
+1. **La variable causal principal es invisible:** El cambio de precio en una gasolinera depende del momento exacto en que llega el camión cisterna a rellenar el tanque subterráneo (la rotación de inventario). Al ser datos corporativos privados, el TFT es estadísticamente "ciego" a la causa real de los saltos de precio.
+2. **IA compitiendo contra Algoritmos Privados:** Las grandes marcas usan software privativo (como *Kalibrate*) con cientos de reglas de negocio duras para fijar precios. El TFT no estaba modelando el comportamiento humano, estaba intentando hacer ingeniería inversa a un sistema experto privativo.
+3. **Ruido Institucional:** El ~50% del precio en España son impuestos, y el gobierno interviene mediante decretos repentinos que revientan la serie temporal estadística.
+
+**La Gran Lección (El Pivot):** El Machine Learning avanzado brilla donde hay **señales humanas endógenas** y factores predictivos reales (como la demanda de movilidad o asistencia laboral). En un mercado opaco y manipulado artificialmente, predecir el céntimo exacto es un ejercicio de vanidad. Modelar la *acción óptima* mediante heurísticas basadas en "Cohetes y Plumas" resultó ser el producto verdaderamente útil.
 
 ---
 
-## 📁 Estructura del repositorio
+## 📁 Estructura del Repositorio Completo
 
 ```text
 GasPredict/
 │
-├── production_engine/          # 🐳 Motor desplegado en producción
-│   ├── docker-compose.yml      #    Orquestación de servicios
-│   ├── .env.example            #    Variables de entorno necesarias
-│   └── app/
-│       ├── main.py             #    Scheduler y orquestador principal
-│       ├── etl_geoportal.py    #    Scraping de la API MITECO
-│       ├── etl_macro.py        #    Datos de Yahoo Finance
-│       ├── model.py            #    Motor de decisión (Cohetes y Plumas)
-│       ├── notifier.py         #    Formateador y emisor Telegram
-│       └── db.py               #    ORM y acceso a TimescaleDB
+├── production_engine/          # 🐳 El sistema actual en producción (Heurística)
+│   ├── docker-compose.yml      
+│   └── app/                    # Orquestación, ETLs, db.py, model.py y notifier.py
 │
-├── notebooks/                  # 🔬 Investigación ML (no en producción)
-│   ├── 01_prepare_data.ipynb   #    Pipeline de datos y feature engineering
-│   ├── 02_train_tft.ipynb      #    Entrenamiento del TFT con GPU
-│   └── 03_evaluate.ipynb       #    Evaluación e interpretabilidad
+├── notebooks/                  # 🔬 Investigación ML (Descartada para prod)
+│   ├── 01_prepare_data.ipynb   
+│   ├── 02_train_tft.ipynb      
+│   └── 03_evaluate.ipynb       
 │
-├── models/                     # 💾 Modelos TFT entrenados
-│   ├── tft-full-epoch=00-val_loss=0.0235.ckpt   # Modelo completo (C. Valenciana)
-│   └── tft-gaspredict-epoch=02-val_loss=0.0579.ckpt  # Modelo ruta específica
-│
-├── data/                       # 📊 Datasets
-│   ├── gaspredict_prices.csv.gz         # Histórico de precios por estación
-│   ├── gaspredict_macro.csv             # Series macro (Brent, EUR/USD...)
-│   ├── train_route.parquet              # Dataset de entrenamiento (ruta)
-│   ├── train_full.parquet               # Dataset de entrenamiento completo
-│   └── station_dna_clusters.parquet     # Clustering de estaciones
+├── models/                     # 💾 Modelos TFT entrenados (.ckpt)
+├── data/                       # 📊 Datasets históricos y Parquets
 │
 └── docs/
-    └── market_research_gas_stations.md  # Análisis estructural del mercado
+    └── market_research_gas_stations.md  # Investigación estructural del mercado
 ```
 
 ---
 
-## 🧠 Los Dos Cerebros: Producción vs. Investigación
+## 📚 Investigación del Mercado
 
-### 1. Motor de Producción — Heurística Asimétrica
-
-La pieza central del sistema es el **motor de decisión** en [`model.py`](production_engine/app/model.py).
-
-No predice el precio exacto. Predice la **dirección y velocidad** del cambio de precio usando el fenómeno conocido en economía energética como "Efecto Cohetes y Plumas":
-
-| Escenario | Comportamiento real del mercado | Cómo lo modela GasPredict |
-|---|---|---|
-| **Brent sube** | Las gasolineras suben en **2-3 días** para proteger márgenes de reposición | Ventana de transmisión: **7 días** → alerta inmediata "¡REPOSTA HOY!" |
-| **Brent baja** | Las gasolineras aguantan el precio alto **semanas o meses** para vaciar el inventario caro | Ventana de transmisión: **14 días** → "Espera, bajará antes del [día]" |
-
-La asimetría está explícita en el código:
-```python
-# Subida (cohete): el precio se traslada en ~7 días
-w = min(1.0, h / 7.0) if brent_trend > 0 else min(1.0, h / 14.0)
-#                                                        ^^^^^^^
-#                              Bajada (pluma): tarda el doble en llegar al surtidor
-```
-
-**Horizonte de predicción útil: 2-7 días.** Más allá de eso, los factores de ruido (decretos fiscales, rotación de inventarios) anulan cualquier señal.
-
----
-
-### 2. Investigación ML — El Experimento TFT
-
-Se entrenó un **Temporal Fusion Transformer** (Lim et al., Google Brain 2021) sobre el histórico completo de precios de la Comunidad Valenciana cruzado con macro indicadores.
-
-**Features del modelo:**
-
-| Tipo | Variables |
-|---|---|
-| Covariables estáticas | `id_station`, `municipio`, `tipo_marca` |
-| Futuras conocidas | `día_semana`, `mes`, `es_fin_de_semana` |
-| Desconocidas (lags) | `precio_lag_1d`, `precio_lag_7d`, `brent_usd`, `brent_eur`, `eur_usd`, `brent_lag_7/14/21/28d` |
-
-**Resultados:**
-
-| Modelo | Dataset | Val Loss (QuantileLoss) |
-|---|---|---|
-| `tft-gaspredict` | Ruta específica | 0.0579 |
-| `tft-full` | C. Valenciana completa | **0.0235** |
-
-**Gráficos generados:**
-
-Importancia de variables (el modelo aprende que el precio de ayer y el Brent son los principales drivers):
-
-![Variable Importance](variable_importance.png)
-
-Atención temporal (el modelo aprende a mirar principalmente los últimos 7-14 días):
-
-![Atención Temporal](attention_temporal.png)
-
-Predicción a 7 días vs. precio real (el modelo captura la tendencia pero no los saltos):
-
-![Predicción 7 días](prediction_7days.png)
-
-Backtest en estaciones clave de la ruta:
-
-![Backtest estaciones clave](backtest_key_stations_full.png)
-
----
-
-## 🔬 Por qué el TFT no fue a producción
-
-A pesar del buen `val_loss`, el modelo ML fue descartado para producción por razones estructurales del dominio, no por limitaciones técnicas:
-
-**1. La variable más importante no existe en datos públicos**
-El principal driver del cambio de precio local es la **rotación del inventario subterráneo** de cada gasolinera. Si una estación compra 40.000 litros un lunes cuando el crudo estaba caro, no bajará el precio hasta agotar ese lote (entre 3 y 14 días según su volumen de ventas). El TFT es completamente ciego a este dato porque es privado.
-
-**2. El modelo compite contra otro algoritmo, no contra la demanda**
-Las marcas grandes (Repsol, BP, Cepsa) usan software de fijación dinámica de precios (ej. Kalibrate) con más de 120 reglas de negocio. El modelo estadístico intenta predecir el resultado de un algoritmo privado y determinista, no un comportamiento humano agregado.
-
-**3. El ruido regulatorio es no modelable**
-Aproximadamente el 50% del precio final es impuesto fijo (IEH + IVA). Los decretos gubernamentales de emergencia (subvenciones de 20 céntimos, modificaciones del IEH) introducen saltos verticales en la serie temporal que ningún modelo puede anticipar.
-
-**Conclusión:** El TFT es una arquitectura potente que requiere un dominio con señal genuina y endógena. En mercados intervenidos, ciegos al inventario real, el error de ±2 céntimos del modelo no permite tomar ninguna decisión de repostaje mejor que la heurística asimétrica.
-
----
-
-## 🚀 Cómo ejecutar el Motor de Producción
-
-### Requisitos
-- Docker y Docker Compose
-- Token de bot de Telegram (opcional, para alertas)
-
-### Configuración
-
-```bash
-cd production_engine
-cp .env.example .env
-# Editar .env con tus credenciales
-```
-
-```env
-DB_PASSWORD=tu_clave_segura
-GRAFANA_PASSWORD=admin_seguro
-TELEGRAM_BOT_TOKEN=    # Dejar vacío para desactivar notificaciones
-TELEGRAM_CHAT_ID=
-```
-
-### Arranque
-
-```bash
-docker compose up -d
-```
-
-El sistema ejecuta el pipeline automáticamente:
-- **07:15** — Actualización matinal (antes de la ruta al trabajo)
-- **18:30** — Actualización vespertina (post-cierre de mercados)
-
-Grafana disponible en `http://localhost:3030`
-
----
-
-## 📚 Investigación de Mercado
-
-El directorio [`docs/`](docs/market_research_gas_stations.md) contiene un análisis exhaustivo de la estructura del mercado minorista de carburantes en España, incluyendo:
-- Cadena de suministro y diferenciación química (aditivos HQ300/HQ400)
-- Tipología de operadores: COCO, CODO, DODO, Low-Cost
-- Estructura fiscal: IEH + IVA (~50% del precio final)
-- El efecto "Cohetes y Plumas" con referencias académicas
-- Fraude del IVA (Ley 7/2024) y transición energética (RED III)
-
-Este análisis fue clave para tomar la decisión arquitectónica de no usar el TFT en producción.
+El documento [`docs/market_research_gas_stations.md`](docs/market_research_gas_stations.md) contiene el análisis macro que justificó el pivote del proyecto. Incluye el estudio operativo de las gasolineras (COCO/DODO), la carga impositiva y el origen del "Efecto Cohetes y Plumas".
