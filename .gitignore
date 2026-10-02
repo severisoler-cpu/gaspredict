@@ -1,0 +1,14 @@
+# Ignorar archivos de entorno y secretos
+.env
+*.env
+
+# Ignorar checkpoints de Jupyter
+.ipynb_checkpoints/
+
+# Ignorar caché de Python
+__pycache__/
+*.pyc
+
+# Ignorar archivos de sistema
+.DS_Store
+Thumbs.db
