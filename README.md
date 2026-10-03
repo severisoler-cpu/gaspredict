@@ -19,11 +19,11 @@ Monitoriza en tiempo real los precios de todos los carburantes (vía API del Min
 📅 Fecha: 02/10/2026 07:15
 
 🛵 Tu Ruta (Getafe → Leganés → Alcorcón) — Moto 10 €:
-⭐ Tu Plenoil Getafe:    1.589 €/L  (6.29 L con 10 €)
+⭐ Tu Plenoil Getafe:       1.589 €/L  (6.29 L con 10 €)
 🏆 Más barata hoy: BALLENOIL LEGANÉS a 1.571 €/L
 💰 Ahorro con 10 €: +0.11 €  (+0.07 L extra)
 
-📊 Medias en Comunidad Valenciana:
+📊 Medias Provinciales:
 • Diésel (Gasóleo A):   1.412 €/L
 • Gasolina 95 E5:       1.591 €/L
 

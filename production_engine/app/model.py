@@ -17,8 +17,8 @@ DIAS_SEMANA = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", 
 def generate_predictions(engine):
     """
     Genera predicciones a 7 y 14 días para:
-    1. Comunidad Valenciana (Gasóleo A y Gasolina 95 E5).
-    2. Plenoil Getafe (Gasolina 95 E5).
+    1. Precios Medios Provinciales (Gasóleo A y Gasolina 95 E5).
+    2. Gasolinera Habitual Favorita (Gasolina 95 E5).
     3. Gasolinera MÁS BARATA de la ruta detectada dinámicamente (Gasolina 95 E5).
 
     Calcula la recomendación del "Mejor Día para Repostar" en moto (depósito 10 €).
