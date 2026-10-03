@@ -13,14 +13,14 @@
       "collapsed": false,
       "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
       "id": 100,
-      "title": "🛵 TU RUTA DIARIA (Getafe → Leganés → Alcorcón) — Gasolina 95 & Moto",
+      "title": "🛵 TU RUTA DIARIA (Getafe -> Leganés -> Alcorcón) — Gasolina 95 & Moto",
       "type": "row"
     },
     {
       "collapsed": false,
       "gridPos": { "h": 4, "w": 8, "x": 0, "y": 1 },
       "id": 101,
-      "title": "⭐ Tu Habitual: Plenoil Getafe (C/ Valencia, 75)",
+      "title": "⭐ Tu Habitual: Plenoil Getafe",
       "type": "stat",
       "datasource": "GasPredict-DB",
       "fieldConfig": {
@@ -71,7 +71,7 @@
       "targets": [
         {
           "datasource": "GasPredict-DB",
-          "rawSql": "SELECT sp.time, sp.price_gasolina_95_e5 as \"value\", gs.name || ' (' || gs.municipality || ') · ' || ROUND(10.0 / sp.price_gasolina_95_e5, 2) || ' L con 10 €' as metric FROM station_prices sp JOIN gas_stations gs ON sp.id_station = gs.id_station WHERE (gs.municipality ILIKE '%Getafe%' OR gs.municipality ILIKE '%Leganés%' OR gs.municipality ILIKE '%Alcorcón%' OR gs.municipality ILIKE '%Fuenlabrada%') AND sp.price_gasolina_95_e5 > 0 AND sp.time = (SELECT MAX(time) FROM station_prices) ORDER BY sp.price_gasolina_95_e5 ASC LIMIT 1;",
+          "rawSql": "SELECT sp.time, sp.price_gasolina_95_e5 as \"value\", gs.name || ' (' || gs.municipality || ') · ' || ROUND(10.0 / sp.price_gasolina_95_e5, 2) || ' L con 10 €' as metric FROM station_prices sp JOIN gas_stations gs ON sp.id_station = gs.id_station WHERE (gs.municipality ILIKE '%Getafe%' OR gs.municipality ILIKE '%Legan%s%' OR gs.municipality ILIKE '%Alcorc%n%') AND sp.price_gasolina_95_e5 > 0 AND sp.time = (SELECT MAX(time) FROM station_prices) ORDER BY sp.price_gasolina_95_e5 ASC LIMIT 1;",
           "refId": "A"
         }
       ]
@@ -101,7 +101,7 @@
       "targets": [
         {
           "datasource": "GasPredict-DB",
-          "rawSql": "WITH latest_time AS (SELECT MAX(time) as t FROM station_prices), commute_prices AS (SELECT sp.time, sp.price_gasolina_95_e5, gs.name, gs.municipality, gs.id_station FROM station_prices sp JOIN gas_stations gs ON sp.id_station = gs.id_station WHERE (gs.municipality ILIKE '%Getafe%' OR gs.municipality ILIKE '%Leganés%' OR gs.municipality ILIKE '%Alcorcón%' OR gs.municipality ILIKE '%Fuenlabrada%') AND sp.price_gasolina_95_e5 > 0 AND sp.time = (SELECT t FROM latest_time)), plenoil AS (SELECT price_gasolina_95_e5 as p FROM commute_prices WHERE id_station = 4017 LIMIT 1), cheapest AS (SELECT price_gasolina_95_e5 as p, name, municipality FROM commute_prices ORDER BY price_gasolina_95_e5 ASC LIMIT 1) SELECT (SELECT t FROM latest_time) as time, CASE WHEN cheapest.p < plenoil.p THEN ROUND(10.0 - (10.0 * (cheapest.p / plenoil.p)), 2) ELSE 0.00 END as \"value\", CASE WHEN cheapest.p < plenoil.p THEN '+' || ROUND((10.0 / cheapest.p) - (10.0 / plenoil.p), 2) || ' L extra (' || cheapest.name || ')' ELSE '¡Plenoil es la más barata hoy!' END as metric FROM plenoil, cheapest;",
+          "rawSql": "WITH latest_time AS (SELECT MAX(time) as t FROM station_prices), commute_prices AS (SELECT sp.time, sp.price_gasolina_95_e5, gs.name, gs.municipality, gs.id_station FROM station_prices sp JOIN gas_stations gs ON sp.id_station = gs.id_station WHERE (gs.municipality ILIKE '%Getafe%' OR gs.municipality ILIKE '%Legan%s%' OR gs.municipality ILIKE '%Alcorc%n%') AND sp.price_gasolina_95_e5 > 0 AND sp.time = (SELECT t FROM latest_time)), plenoil AS (SELECT price_gasolina_95_e5 as p FROM commute_prices WHERE id_station = 4017 LIMIT 1), cheapest AS (SELECT price_gasolina_95_e5 as p, name, municipality FROM commute_prices ORDER BY price_gasolina_95_e5 ASC LIMIT 1) SELECT (SELECT t FROM latest_time) as time, CASE WHEN cheapest.p < plenoil.p THEN ROUND(10.0 - (10.0 * (cheapest.p / plenoil.p)), 2) ELSE 0.00 END as \"value\", CASE WHEN cheapest.p < plenoil.p THEN '+' || ROUND((10.0 / cheapest.p) - (10.0 / plenoil.p), 2) || ' L extra (' || cheapest.name || ')' ELSE '¡Plenoil es la más barata hoy!' END as metric FROM plenoil, cheapest;",
           "refId": "A"
         }
       ]
@@ -203,7 +203,7 @@
         {
           "datasource": "GasPredict-DB",
           "format": "table",
-          "rawSql": "WITH plenoil_ref AS (SELECT price_gasolina_95_e5 as ref_price FROM station_prices WHERE id_station = 4017 AND time = (SELECT MAX(time) FROM station_prices)) SELECT gs.municipality as \"Municipio\", CASE WHEN gs.id_station = 4017 THEN '⭐ PLENOIL (Tu habitual)' WHEN gs.name ILIKE '%plenergy%' THEN 'PLENOIL' ELSE gs.name END as \"Gasolinera\", gs.address as \"Dirección\", sp.price_gasolina_95_e5 as \"Gasolina 95 (€/L)\", ROUND(10.0 / sp.price_gasolina_95_e5, 2) as \"Litros con 10 €\", ROUND(sp.price_gasolina_95_e5 - (SELECT ref_price FROM plenoil_ref), 3) as \"Dif. vs tu Plenoil (€/L)\" FROM gas_stations gs JOIN station_prices sp ON gs.id_station = sp.id_station WHERE (gs.municipality ILIKE '%Getafe%' OR gs.municipality ILIKE '%Leganés%' OR gs.municipality ILIKE '%Alcorcón%' OR gs.municipality ILIKE '%Fuenlabrada%') AND sp.price_gasolina_95_e5 > 0 AND sp.time = (SELECT MAX(time) FROM station_prices) ORDER BY sp.price_gasolina_95_e5 ASC;",
+          "rawSql": "WITH plenoil_ref AS (SELECT price_gasolina_95_e5 as ref_price FROM station_prices WHERE id_station = 4017 AND time = (SELECT MAX(time) FROM station_prices)) SELECT gs.municipality as \"Municipio\", CASE WHEN gs.id_station = 4017 THEN '⭐ PLENOIL (Tu habitual)' WHEN gs.name ILIKE '%plenergy%' THEN 'PLENOIL' ELSE gs.name END as \"Gasolinera\", gs.address as \"Dirección\", sp.price_gasolina_95_e5 as \"Gasolina 95 (€/L)\", ROUND(10.0 / sp.price_gasolina_95_e5, 2) as \"Litros con 10 €\", ROUND(sp.price_gasolina_95_e5 - (SELECT ref_price FROM plenoil_ref), 3) as \"Dif. vs tu Plenoil (€/L)\" FROM gas_stations gs JOIN station_prices sp ON gs.id_station = sp.id_station WHERE (gs.municipality ILIKE '%Getafe%' OR gs.municipality ILIKE '%Legan%s%' OR gs.municipality ILIKE '%Alcorc%n%') AND sp.price_gasolina_95_e5 > 0 AND sp.time = (SELECT MAX(time) FROM station_prices) ORDER BY sp.price_gasolina_95_e5 ASC;",
           "refId": "A"
         }
       ]
